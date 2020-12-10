@@ -12,36 +12,37 @@ function PokemonInfo({pokemonName}) {
   // 🐨 Have state for the pokemon (null)
   const [pokemon, setPokemon] = React.useState(null);
   const [fetchError, setFetchError] = React.useState(null);
-  // 🐨 use React.useEffect where the callback should be called whenever the
-  // pokemon name changes.
-  // 💰 DON'T FORGET THE DEPENDENCIES ARRAY!
-  // 💰 if the pokemonName is falsy (an empty string) then don't bother making the request (exit early).
-  // 🐨 before calling `fetchPokemon`, make sure to update the loading state
-  // 💰 Use the `fetchPokemon` function to fetch a pokemon by its name:
-  //   fetchPokemon('Pikachu').then(
-  //     pokemonData => { /* update all the state here */},
-  //   )
+  const [state, setState] = React.useState('idle');
+
   React.useEffect(()=>{
     if (!pokemonName) return;
-    setPokemon(null); // reset state to show loading screen
-    setFetchError(null); // reset error state to show loading screen
+    //setPokemon(null); // reset state to show loading screen
+    //setFetchError(null); // reset error state to show loading screen
+    setState('pending');
     fetchPokemon(pokemonName).then(
-      pokemonData => setPokemon(pokemonData)
+      pokemonData => {
+        setPokemon(pokemonData) //the Pokemonview component needs this data before the state can be set to resolved otherwise it will try to re-render without any data
+        setState('resolved');
+      }
     ).catch(error => {
+      setState('rejected');
       setFetchError(error);
     });
   },[pokemonName])
-  // 🐨 return the following things based on the `pokemon` state and `pokemonName` prop:
-  //   1. no pokemonName: 'Submit a pokemon'
-  //   2. pokemonName but no pokemon: <PokemonInfoFallback name={pokemonName} />
-  //   3. pokemon: <PokemonDataView pokemon={pokemon} />
-  if (fetchError) {
-    return (<div role="alert">There was an error: <pre style={{whiteSpace: 'normal'}}>{fetchError.message}</pre></div>)
-  };
-  if (!pokemonName) return 'Submit a pokemon';
-  if (!pokemon) return <PokemonInfoFallback name={pokemonName} />
 
-  return <PokemonDataView pokemon={pokemon} />
+
+  switch (state) {
+    case 'rejected':
+      return <div role="alert">There was an error: <pre style={{whiteSpace: 'normal'}}>{fetchError.message}</pre></div>
+    case 'idle':
+      return 'Submit a pokemon'
+    case 'pending':
+      return <PokemonInfoFallback name={pokemonName} />
+    case 'resolved':
+      return <PokemonDataView pokemon={pokemon} />
+    default:
+      throw new Error('This should be impossible');
+  }
 }
 
 function App() {

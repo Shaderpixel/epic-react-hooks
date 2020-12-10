@@ -3,14 +3,37 @@
 
 import * as React from 'react'
 
-function Greeting({initialName = ''}) {
-  // 🐨 initialize the state to the value from localStorage
-  // 💰 window.localStorage.getItem('name') || initialName
-  const [name, setName] = React.useState(initialName)
+// options (third argument) defaults to an empty object
+function useLocalStorageState(key, defaultValue = '', {
+  serialize = JSON.stringify,
+  deserialize = JSON.parse
+} = {}) {
+  const [state, setState] = React.useState(() => {
+    const localStorageVal = window.localStorage.getItem(key);
+    if (localStorageVal) {
+      return deserialize(window.localStorage.getItem(key));
+    }
+    // if defaultvalue is an expensive function that needs to be evaluated during lazy initializing in intiial call
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
+  }) // using lazy intializer so that localStorage is only accessed once on initial render
 
-  // 🐨 Here's where you'll use `React.useEffect`.
-  // The callback should set the `name` in localStorage.
-  // 💰 window.localStorage.setItem('name', name)
+  //if key name changes
+  const prevKeyRef = React.useRef(key);
+
+  React.useEffect(() => {
+    // key could have changed but useEffect did not trigger recently to update the localStorage
+    const prevKey = prevKeyRef.current;
+    if (prevKey !== key) window.localStorage.removeItem('prevKey');
+    prevKeyRef.current = key;
+
+    window.localStorage.setItem(key, serialize(state));
+  },[key, serialize, state]);
+
+  return [state, setState];
+}
+
+function Greeting({initialName = ''}) {
+  const [name, setName] = useLocalStorageState('name' ,initialName);
 
   function handleChange(event) {
     setName(event.target.value)
@@ -19,7 +42,7 @@ function Greeting({initialName = ''}) {
     <div>
       <form>
         <label htmlFor="name">Name: </label>
-        <input onChange={handleChange} id="name" />
+        <input onChange={handleChange} id="name" value={name}/>
       </form>
       {name ? <strong>Hello {name}</strong> : 'Please type your name'}
     </div>
